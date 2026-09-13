@@ -14,7 +14,7 @@ A minimal shared-expense tracker for the Harvard Business Group (8 members): rec
 - **Splitting**: every expense defaults to an equal split across the whole group, but the creator can select a subset of members to split it with instead (e.g. only 3 people at a lunch) — still split equally among whoever is selected. No unequal/custom-weight shares in v1.
 - **v1 scope**: expenses (amount, free-text description, payer, date, participant subset for split), recap (net balance per member + suggested settling-up transfers), settlements (from/to member, amount, date, optional note). No categories, no multi-currency, no email notifications.
 - **Expense date**: defaults to today, editable to backdate a late-entered receipt.
-- **Deployment**: Hetzner server, `splitmate.samberger.fr`. **The server already hosts other websites, so deployment must slot in alongside them rather than assume splitmate owns ports 80/443** — exact approach (join an existing reverse proxy vs. run alongside on an internal port) is pending confirmation of what's currently fronting those other sites. See "Open questions" below.
+- **Deployment**: Hetzner server, `splitmate.samberger.fr`. The server already hosts other websites fronted by **nginx** (confirmed) — splitmate does not run its own reverse proxy or touch ports 80/443 directly; it ships as its own app container on an internal-only port, and we add a new nginx server block + certbot cert for `splitmate.samberger.fr` alongside the existing sites (see "Deployment plan").
 - **Repo**: https://github.com/Nsamberg/splitmate, this branch (`claude/hbg-expense-tracker-design-dy847a`).
 
 ## Data model
@@ -62,24 +62,31 @@ splitmate/
   README.md
 ```
 
-## Deployment plan
+## Deployment plan (finalized: nginx is the existing reverse proxy)
 
-Two candidate approaches, to be finalized once we know what fronts the server's other sites (see "Open questions"):
+- `docker-compose.yml` runs just the `app` service (uvicorn/FastAPI), bound only to localhost on an internal port not used by anything else, e.g. `127.0.0.1:8090:8000`. No Caddy, no port 80/443 in the compose file — nginx already owns those.
+- SQLite file on a named Docker volume so it survives container rebuilds/redeploys.
+- `.env` (not committed) holds `ACCESS_CODE` and `SESSION_SECRET`.
+- A new nginx server block is added alongside the existing sites' configs (e.g. `/etc/nginx/sites-available/splitmate.samberger.fr`, symlinked into `sites-enabled`), proxying `splitmate.samberger.fr` → `127.0.0.1:8090`:
+  ```nginx
+  server {
+      listen 80;
+      server_name splitmate.samberger.fr;
 
-- **A — existing reverse proxy present** (Caddy/Nginx/Traefik/nginx-proxy-manager, as a system service or container): splitmate ships as its own `app` container (uvicorn/FastAPI) on an internal-only port, with a site/vhost block added to the *existing* proxy for `splitmate.samberger.fr` — no new Caddy/Nginx of our own, no port 80/443 contention.
-- **B — no shared proxy, each site on its own host port**: splitmate's `app` container binds to a free host port (e.g. `127.0.0.1:8090:8000`), and either we add a lightweight Caddy just for splitmate (on a free port range, or taking 80/443 if genuinely free) or DNS/manual port-forwarding points `splitmate.samberger.fr` at that port.
-
-Common to both:
-- `docker-compose.yml` for the `app` service; SQLite file on a named volume so it survives redeploys.
-- `.env` holds `ACCESS_CODE` and `SESSION_SECRET` (not committed).
+      location / {
+          proxy_pass http://127.0.0.1:8090;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+  }
+  ```
+- TLS via `certbot --nginx -d splitmate.samberger.fr` (same tool likely already used for the other sites) — issues the cert and rewrites the block to redirect 80→443 automatically.
+- `docker compose up -d --build` on the box to (re)deploy; `nginx -t && systemctl reload nginx` after any config change.
 - Daily cron copies the SQLite file to a backup location.
 
-## Open questions for this design pass
+## Remaining open item
 
-1. **What's currently fronting the other websites on the Hetzner server** (reverse proxy already running vs. per-site ports, per approach A/B above)? Check with:
-   ```bash
-   sudo ss -tlnp | grep -E ':80|:443'
-   sudo systemctl status nginx caddy traefik apache2 2>&1 | grep -E "Active|Unit"
-   docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}'
-   ```
-2. Anything else you want to change in the model, permissions, or deployment plan above before you give the go-ahead to build?
+- Confirm the internal port (`8090` above is just a placeholder) doesn't collide with anything else already running — worth a quick `sudo ss -tlnp | grep 8090` before first deploy.
+- Anything else you want to change in the model, permissions, or deployment plan above before you give the go-ahead to build?
