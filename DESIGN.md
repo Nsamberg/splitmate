@@ -67,7 +67,7 @@ splitmate/
 
 - `docker-compose.yml` runs just the `app` service (uvicorn/FastAPI), bound only to localhost on an internal port not used by anything else, e.g. `127.0.0.1:8090:8000`. No Caddy, no port 80/443 in the compose file — nginx already owns those.
 - SQLite file on a named Docker volume so it survives container rebuilds/redeploys.
-- `.env` (not committed) holds `ACCESS_CODE` and `SESSION_SECRET`.
+- `.env` (not committed, gitignored) holds `ACCESS_CODE` and `SESSION_SECRET`. The real access code has been chosen and shared with Niko directly (not recorded in this repo/doc, since it's a live credential) — set it in `.env` on the server at deploy time. A committed `.env.example` shows the expected shape with a placeholder value.
 - A new nginx server block is added alongside the existing sites' configs (e.g. `/etc/nginx/sites-available/splitmate.samberger.fr`, symlinked into `sites-enabled`), proxying `splitmate.samberger.fr` → `127.0.0.1:8090`:
   ```nginx
   server {
