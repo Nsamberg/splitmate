@@ -58,7 +58,8 @@ splitmate/
   tests/
   Dockerfile
   docker-compose.yml
-  Caddyfile
+  deploy/
+    nginx-splitmate.samberger.fr.conf   # nginx server block for this site, copied onto the server
   README.md
 ```
 
