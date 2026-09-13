@@ -8,10 +8,13 @@ A minimal shared-expense tracker for the Harvard Business Group (8 members): rec
 - **Storage**: SQLite, file on a Docker volume. Fine for 8 users / low volume; can migrate to Postgres later if needed.
 - **Auth**: single shared access code to enter the site, then "pick your name" from the seeded member list. Session via a signed, `HttpOnly`, `Secure`, `SameSite=Lax` cookie. No passwords.
 - **Members (seeded at init)**: Ade, Sandro, Vidhya, Mohammed, Atsushi, Huseyin, Sam, Niko.
-  - **Niko is admin.** *(Open question below — what admin means in v1.)*
-- **Edit/delete permissions**: a member can edit or delete only the expenses/settlements *they* created (attributed by session, not open to everyone).
+  - **Niko is admin, with full admin rights**: can edit/delete *anyone's* expenses/settlements (not just their own), add/remove/rename members, and regenerate the shared access code.
+- **Edit/delete permissions**: a non-admin member can edit or delete only the expenses/settlements *they* created (attributed by session). Niko (admin) can edit/delete anyone's.
+- **Soft-delete**: deleting an expense or settlement marks it `deleted` (with who/when) rather than removing the row. Deleted entries are excluded from balance calculations and from the normal list views, but stay queryable for an audit trail. Nothing is hard-deleted in v1.
+- **Splitting**: every expense defaults to an equal split across the whole group, but the creator can select a subset of members to split it with instead (e.g. only 3 people at a lunch) — still split equally among whoever is selected. No unequal/custom-weight shares in v1.
 - **v1 scope**: expenses (amount, free-text description, payer, date, participant subset for split), recap (net balance per member + suggested settling-up transfers), settlements (from/to member, amount, date, optional note). No categories, no multi-currency, no email notifications.
-- **Deployment**: Hetzner server, Docker Compose — `app` (uvicorn/FastAPI) + `caddy` (reverse proxy, automatic HTTPS via Let's Encrypt) on `splitmate.samberger.fr`.
+- **Expense date**: defaults to today, editable to backdate a late-entered receipt.
+- **Deployment**: Hetzner server, `splitmate.samberger.fr`. **The server already hosts other websites, so deployment must slot in alongside them rather than assume splitmate owns ports 80/443** — exact approach (join an existing reverse proxy vs. run alongside on an internal port) is pending confirmation of what's currently fronting those other sites. See "Open questions" below.
 - **Repo**: https://github.com/Nsamberg/splitmate, this branch (`claude/hbg-expense-tracker-design-dy847a`).
 
 ## Data model
@@ -61,19 +64,22 @@ splitmate/
 
 ## Deployment plan
 
-- `docker-compose.yml`: `app` + `caddy`, SQLite file on a named volume so it survives redeploys.
+Two candidate approaches, to be finalized once we know what fronts the server's other sites (see "Open questions"):
+
+- **A — existing reverse proxy present** (Caddy/Nginx/Traefik/nginx-proxy-manager, as a system service or container): splitmate ships as its own `app` container (uvicorn/FastAPI) on an internal-only port, with a site/vhost block added to the *existing* proxy for `splitmate.samberger.fr` — no new Caddy/Nginx of our own, no port 80/443 contention.
+- **B — no shared proxy, each site on its own host port**: splitmate's `app` container binds to a free host port (e.g. `127.0.0.1:8090:8000`), and either we add a lightweight Caddy just for splitmate (on a free port range, or taking 80/443 if genuinely free) or DNS/manual port-forwarding points `splitmate.samberger.fr` at that port.
+
+Common to both:
+- `docker-compose.yml` for the `app` service; SQLite file on a named volume so it survives redeploys.
 - `.env` holds `ACCESS_CODE` and `SESSION_SECRET` (not committed).
-- Caddy handles automatic Let's Encrypt HTTPS for `splitmate.samberger.fr`.
-- `docker compose up -d` on the Hetzner box. Daily cron copies the SQLite file to a backup location.
+- Daily cron copies the SQLite file to a backup location.
 
 ## Open questions for this design pass
 
-1. **What does "Niko is admin" mean concretely?** e.g.:
-   - Can edit/delete *anyone's* expenses/settlements (not just their own)?
-   - Can add/remove/rename members?
-   - Can regenerate the access code?
-   - All of the above / something else?
-2. **Equal split only, or per-expense custom shares later?** v1 assumes equal split among selected participants — confirm that's enough for now.
-3. **Should a deleted expense/settlement be hard-deleted, or soft-deleted (kept for history but excluded from balances)?** Soft-delete gives you an audit trail if a number ever looks wrong.
-4. **Date field**: default to "today" with an optional override (for entering a receipt a few days late), correct?
-5. Anything else you want to change in the model, permissions, or deployment plan above before I start building?
+1. **What's currently fronting the other websites on the Hetzner server** (reverse proxy already running vs. per-site ports, per approach A/B above)? Check with:
+   ```bash
+   sudo ss -tlnp | grep -E ':80|:443'
+   sudo systemctl status nginx caddy traefik apache2 2>&1 | grep -E "Active|Unit"
+   docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}'
+   ```
+2. Anything else you want to change in the model, permissions, or deployment plan above before you give the go-ahead to build?
