@@ -18,7 +18,7 @@
     <label>Paid by
       <select name="paid_by_id" required>
         {% for m in members %}
-        <option value="{{ m.id }}">{{ m.name }}</option>
+        <option value="{{ m.id }}" {% if m.id == member.id %}selected{% endif %}>{{ m.name }}</option>
         {% endfor %}
       </select>
     </label>

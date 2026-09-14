@@ -35,7 +35,9 @@ def settle_form(
             "members": members,
             "today": date.today().isoformat(),
             "prefill": {
-                "from_member_id": from_member_id,
+                # Default "From" to whoever's logged in, unless a specific
+                # transfer was prefilled from the recap page's suggestions.
+                "from_member_id": from_member_id if from_member_id is not None else member.id,
                 "to_member_id": to_member_id,
                 "amount": amount,
             },
