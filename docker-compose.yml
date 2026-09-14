@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - APP_ENV=production
+      - DATA_DIR=/app/data
+    volumes:
+      - splitmate_data:/app/data
+    # Bound to localhost only: the server's existing nginx reverse-proxies
+    # splitmate.samberger.fr to this port. See deploy/DEPLOY.md.
+    ports:
+      - "127.0.0.1:8090:8000"
+
+volumes:
+  splitmate_data:

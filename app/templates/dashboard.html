@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Dashboard &middot; splitmate{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Add an expense</h2>
+  <form method="post" action="/expenses" class="stack">
+    <label>Description
+      <input type="text" name="description" required maxlength="200" placeholder="e.g. Dinner at Cafe X">
+    </label>
+    <div class="row">
+      <label>Amount
+        <input type="text" name="amount" inputmode="decimal" required placeholder="0.00" id="amount-input">
+      </label>
+      <label>Date
+        <input type="date" name="expense_date" value="{{ today }}" required>
+      </label>
+    </div>
+    <label>Paid by
+      <select name="paid_by_id" required>
+        {% for m in members %}
+        <option value="{{ m.id }}">{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <fieldset>
+      <legend>Split between</legend>
+      <div class="member-grid">
+        {% for m in members %}
+        <label class="member-choice">
+          <input type="checkbox" name="participant_ids" value="{{ m.id }}" class="participant-checkbox" checked>
+          <span>{{ m.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <p class="hint" id="split-preview"></p>
+    </fieldset>
+    <button type="submit">Add expense</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Recent activity</h2>
+  {% if not activity %}
+  <p class="hint">Nothing recorded yet.</p>
+  {% endif %}
+  <ul class="activity-list">
+    {% for item in activity %}
+    <li class="activity-row">
+      {% if item.type == 'expense' %}
+        <div>
+          <strong>{{ item.description }}</strong>
+          <span class="muted">paid by {{ item.paid_by }} &middot; {{ item.date }}</span>
+        </div>
+        <div class="amount">${{ item.amount }}</div>
+      {% else %}
+        <div>
+          <strong>Transfer: {{ item.from_name }} &rarr; {{ item.to_name }}</strong>
+          <span class="muted">{{ item.description }} &middot; {{ item.date }}</span>
+        </div>
+        <div class="amount">${{ item.amount }}</div>
+      {% endif %}
+      {% if item.created_by_id == member.id or member.is_admin %}
+        <div class="row-actions">
+          {% if item.type == 'expense' %}
+            <a href="/expenses/{{ item.id }}/edit">Edit</a>
+            <form method="post" action="/expenses/{{ item.id }}/delete" onsubmit="return confirm('Delete this expense?');">
+              <button type="submit" class="link-btn">Delete</button>
+            </form>
+          {% else %}
+            <form method="post" action="/settlements/{{ item.id }}/delete" onsubmit="return confirm('Delete this transfer?');">
+              <button type="submit" class="link-btn">Delete</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<script>
+(function () {
+  var amountInput = document.getElementById('amount-input');
+  var preview = document.getElementById('split-preview');
+  var checkboxes = document.querySelectorAll('.participant-checkbox');
+
+  function updatePreview() {
+    var amount = parseFloat(amountInput.value);
+    var n = document.querySelectorAll('.participant-checkbox:checked').length;
+    if (!amount || amount <= 0 || n === 0) {
+      preview.textContent = '';
+      return;
+    }
+    preview.textContent = 'Split ' + n + ' way' + (n > 1 ? 's' : '') + ': ~$' + (amount / n).toFixed(2) + ' each.';
+  }
+
+  amountInput.addEventListener('input', updatePreview);
+  checkboxes.forEach(function (cb) { cb.addEventListener('change', updatePreview); });
+})();
+</script>
+{% endblock %}

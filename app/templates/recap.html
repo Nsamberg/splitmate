@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Recap &middot; splitmate{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Balances</h2>
+  <table class="balances-table">
+    <thead><tr><th>Member</th><th>Balance</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="{{ 'positive' if r.cents > 0 else ('negative' if r.cents < 0 else '') }}">
+        <td>{{ r.name }}</td>
+        <td>{{ r.status }}{% if r.cents != 0 %}: ${{ r.amount }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Suggested transfers</h2>
+  {% if not suggestions %}
+  <p class="hint">Everyone's settled up. Nothing to transfer.</p>
+  {% endif %}
+  <ul class="suggestion-list">
+    {% for s in suggestions %}
+    <li>
+      <span>{{ s.from_name }} &rarr; {{ s.to_name }}: <strong>${{ s.amount }}</strong></span>
+      <a class="btn-secondary" href="/settle?from_member_id={{ s.from_id }}&amp;to_member_id={{ s.to_id }}&amp;amount={{ s.amount_raw }}">Record this transfer</a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Admin &middot; splitmate{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Members</h2>
+  <ul class="admin-member-list">
+    {% for m in members %}
+    <li>
+      <form method="post" action="/admin/members/{{ m.id }}/rename" class="inline">
+        <input type="text" name="name" value="{{ m.name }}">
+        <button type="submit">Rename</button>
+      </form>
+      <span class="badge {{ 'active' if m.active else 'inactive' }}">{{ 'active' if m.active else 'inactive' }}</span>
+      {% if m.is_admin %}<span class="badge">admin</span>{% endif %}
+      <form method="post" action="/admin/members/{{ m.id }}/toggle-active" class="inline">
+        <button type="submit">{{ 'Deactivate' if m.active else 'Reactivate' }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  <h3>Add member</h3>
+  <form method="post" action="/admin/members" class="inline">
+    <input type="text" name="name" placeholder="Full name" required>
+    <button type="submit">Add</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Access code</h2>
+  <p class="hint">Current code: <code>{{ access_code }}</code></p>
+  <form method="post" action="/admin/access-code/regenerate" class="inline" onsubmit="return confirm('Generate a new random access code? Everyone will need the new one to log in.');">
+    <button type="submit">Regenerate randomly</button>
+  </form>
+  <form method="post" action="/admin/access-code/set" class="inline">
+    <input type="text" name="new_code" placeholder="Set a custom code">
+    <button type="submit">Set</button>
+  </form>
+</div>
+{% endblock %}

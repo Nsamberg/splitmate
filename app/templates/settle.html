@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Settle up &middot; splitmate{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h2>Record a transfer</h2>
+  <form method="post" action="/settle" class="stack">
+    <label>From (who paid)
+      <select name="from_member_id" required>
+        <option value="" disabled {% if not prefill.from_member_id %}selected{% endif %}>Select&hellip;</option>
+        {% for m in members %}
+        <option value="{{ m.id }}" {% if prefill.from_member_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>To (who received it)
+      <select name="to_member_id" required>
+        <option value="" disabled {% if not prefill.to_member_id %}selected{% endif %}>Select&hellip;</option>
+        {% for m in members %}
+        <option value="{{ m.id }}" {% if prefill.to_member_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="row">
+      <label>Amount
+        <input type="text" name="amount" inputmode="decimal" required value="{{ prefill.amount or '' }}">
+      </label>
+      <label>Date
+        <input type="date" name="settlement_date" value="{{ today }}" required>
+      </label>
+    </div>
+    <label>Note (optional)
+      <input type="text" name="note" maxlength="200" placeholder="e.g. Venmo, cash">
+    </label>
+    <button type="submit">Record transfer</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Who are you? &middot; splitmate{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Who are you?</h1>
+  <form method="post" action="/login/member" class="stack">
+    <div class="member-grid">
+      {% for m in members %}
+      <label class="member-choice">
+        <input type="radio" name="member_id" value="{{ m.id }}" required>
+        <span>{{ m.name }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <button type="submit">Continue</button>
+  </form>
+</div>
+{% endblock %}

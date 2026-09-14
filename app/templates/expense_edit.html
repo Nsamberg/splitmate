@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Edit expense &middot; splitmate{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Edit expense</h2>
+  <form method="post" action="/expenses/{{ expense.id }}/edit" class="stack">
+    <label>Description
+      <input type="text" name="description" required maxlength="200" value="{{ expense.description }}">
+    </label>
+    <div class="row">
+      <label>Amount
+        <input type="text" name="amount" inputmode="decimal" required value="{{ amount }}">
+      </label>
+      <label>Date
+        <input type="date" name="expense_date" value="{{ expense.expense_date }}" required>
+      </label>
+    </div>
+    <label>Paid by
+      <select name="paid_by_id" required>
+        {% for m in members %}
+        <option value="{{ m.id }}" {% if m.id == expense.paid_by_id %}selected{% endif %}>{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <fieldset>
+      <legend>Split between</legend>
+      <div class="member-grid">
+        {% for m in members %}
+        <label class="member-choice">
+          <input type="checkbox" name="participant_ids" value="{{ m.id }}" {% if m.id in participant_ids %}checked{% endif %}>
+          <span>{{ m.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    <div class="row">
+      <button type="submit">Save changes</button>
+      <a href="/" class="btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

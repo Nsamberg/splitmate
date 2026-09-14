@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Log in &middot; splitmate{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>splitmate</h1>
+  <p class="hint">Enter the group access code to continue.</p>
+  <form method="post" action="/login" class="stack">
+    <label>Access code
+      <input type="text" name="access_code" autocomplete="off" autofocus required>
+    </label>
+    <button type="submit">Continue</button>
+  </form>
+</div>
+{% endblock %}

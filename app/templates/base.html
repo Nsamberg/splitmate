@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}splitmate{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  {% if member %}
+  <header class="topbar">
+    <a class="brand" href="/">splitmate</a>
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/recap">Recap</a>
+      <a href="/settle">Settle up</a>
+      {% if member.is_admin %}<a href="/admin">Admin</a>{% endif %}
+    </nav>
+    <div class="who">
+      {{ member.name }}{% if member.is_admin %} <span class="badge">admin</span>{% endif %}
+      &middot; <a href="/logout">Logout</a>
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="container">
+    {% for f in flashes %}
+      <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
