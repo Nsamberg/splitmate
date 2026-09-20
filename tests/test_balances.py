@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from sqlmodel import Session, SQLModel, create_engine
 
-from app.balances import compute_balances, suggest_settlements
+from app.balances import compute_balances, member_ledger, suggest_settlements
 from app.models import Expense, ExpenseParticipant, Member, Settlement
 from app.money import split_equally
 
@@ -148,3 +148,47 @@ def test_suggest_settlements_minimal_transfers():
 def test_suggest_settlements_empty_when_balanced():
     balances = {1: 0, 2: 0}
     assert suggest_settlements(balances) == []
+
+
+def test_member_ledger_explains_the_balance():
+    db = make_session()
+    alice, bob = add_members(db, "Alice", "Bob")
+    add_expense(db, alice, 1000, [alice, bob])  # Alice paid 1000, split 500/500
+    db.add(
+        Settlement(
+            from_member_id=bob.id,
+            to_member_id=alice.id,
+            amount_cents=200,
+            settlement_date=date.today(),
+            note="Venmo",
+            created_by_id=bob.id,
+        )
+    )
+    db.commit()
+
+    alice_entries = member_ledger(db, alice.id)
+    # Paid 1000 (+), her own share -500, received Bob's 200 settlement (-200).
+    assert sorted(e["cents"] for e in alice_entries) == sorted([1000, -500, -200])
+    assert sum(e["cents"] for e in alice_entries) == 300  # matches compute_balances
+
+    bob_entries = member_ledger(db, bob.id)
+    # His share -500, paid Alice 200 settlement (+200).
+    assert sorted(e["cents"] for e in bob_entries) == sorted([-500, 200])
+    assert sum(e["cents"] for e in bob_entries) == -300
+
+    balances = compute_balances(db)
+    assert sum(e["cents"] for e in alice_entries) == balances[alice.id]
+    assert sum(e["cents"] for e in bob_entries) == balances[bob.id]
+
+
+def test_member_ledger_ignores_soft_deleted():
+    db = make_session()
+    alice, bob = add_members(db, "Alice", "Bob")
+    expense = add_expense(db, alice, 1000, [alice, bob])
+    expense.deleted_at = datetime.utcnow()
+    expense.deleted_by_id = alice.id
+    db.add(expense)
+    db.commit()
+
+    assert member_ledger(db, alice.id) == []
+    assert member_ledger(db, bob.id) == []

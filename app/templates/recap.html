@@ -23,9 +23,38 @@
   {% endif %}
   <ul class="suggestion-list">
     {% for s in suggestions %}
-    <li>
-      <span>{{ s.from_name }} &rarr; {{ s.to_name }}: <strong>${{ s.amount }}</strong></span>
-      <a class="btn-secondary" href="/settle?from_member_id={{ s.from_id }}&amp;to_member_id={{ s.to_id }}&amp;amount={{ s.amount_raw }}">Record this transfer</a>
+    <li class="suggestion-item">
+      <div class="suggestion-row">
+        <span>{{ s.from_name }} &rarr; {{ s.to_name }}: <strong>${{ s.amount }}</strong></span>
+        <a class="btn-secondary" href="/settle?from_member_id={{ s.from_id }}&amp;to_member_id={{ s.to_id }}&amp;amount={{ s.amount_raw }}">Record this transfer</a>
+      </div>
+      <details class="suggestion-why">
+        <summary>Why?</summary>
+        <div class="ledger-columns">
+          <div class="ledger-col">
+            <p class="hint">{{ s.from_name }} owes ${{ s.from_balance }} overall:</p>
+            <ul class="ledger">
+              {% for entry in s.from_ledger %}
+              <li>
+                <span class="ledger-desc">{{ entry.description }} <span class="muted">&middot; {{ entry.date }}</span></span>
+                <span class="ledger-amount {{ 'positive' if entry.positive else 'negative' }}">{{ entry.amount }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="ledger-col">
+            <p class="hint">{{ s.to_name }} is owed ${{ s.to_balance }} overall:</p>
+            <ul class="ledger">
+              {% for entry in s.to_ledger %}
+              <li>
+                <span class="ledger-desc">{{ entry.description }} <span class="muted">&middot; {{ entry.date }}</span></span>
+                <span class="ledger-amount {{ 'positive' if entry.positive else 'negative' }}">{{ entry.amount }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </details>
     </li>
     {% endfor %}
   </ul>

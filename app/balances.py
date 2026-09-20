@@ -33,6 +33,65 @@ def compute_balances(db: Session) -> dict[int, int]:
     return dict(balances)
 
 
+def member_ledger(db: Session, member_id: int) -> list[dict]:
+    """Itemized entries behind a member's balance: every expense they paid or
+    had a share in, and every settlement they sent or received. Each entry's
+    `cents` is signed the same way as compute_balances (positive = increases
+    what the group owes them) — this is the "why" behind a recap balance or
+    suggested transfer."""
+    entries: list[dict] = []
+
+    paid_expenses = db.exec(
+        select(Expense).where(Expense.deleted_at.is_(None), Expense.paid_by_id == member_id)
+    ).all()
+    for e in paid_expenses:
+        entries.append(
+            {
+                "date": e.expense_date,
+                "description": f'Paid for "{e.description}"',
+                "cents": e.amount_cents,
+            }
+        )
+
+    shares = db.exec(select(ExpenseParticipant).where(ExpenseParticipant.member_id == member_id)).all()
+    for share in shares:
+        expense = db.get(Expense, share.expense_id)
+        if not expense or expense.deleted_at is not None:
+            continue
+        entries.append(
+            {
+                "date": expense.expense_date,
+                "description": f'Your share of "{expense.description}"',
+                "cents": -share.share_cents,
+            }
+        )
+
+    sent = db.exec(
+        select(Settlement).where(
+            Settlement.deleted_at.is_(None), Settlement.from_member_id == member_id
+        )
+    ).all()
+    for s in sent:
+        to_member = db.get(Member, s.to_member_id)
+        label = f"You paid {to_member.name if to_member else 'someone'}"
+        if s.note:
+            label += f" ({s.note})"
+        entries.append({"date": s.settlement_date, "description": label, "cents": s.amount_cents})
+
+    received = db.exec(
+        select(Settlement).where(Settlement.deleted_at.is_(None), Settlement.to_member_id == member_id)
+    ).all()
+    for s in received:
+        from_member = db.get(Member, s.from_member_id)
+        label = f"{from_member.name if from_member else 'Someone'} paid you"
+        if s.note:
+            label += f" ({s.note})"
+        entries.append({"date": s.settlement_date, "description": label, "cents": -s.amount_cents})
+
+    entries.sort(key=lambda entry: entry["date"], reverse=True)
+    return entries
+
+
 def suggest_settlements(balances: dict[int, int]) -> list[tuple[int, int, int]]:
     """Minimal set of (from_member_id, to_member_id, cents) transfers that would
     zero everyone out, via a greedy largest-debtor-pays-largest-creditor match."""

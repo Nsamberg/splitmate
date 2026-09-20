@@ -150,11 +150,40 @@ legend { color: var(--muted); font-size: 0.85rem; padding: 0 0.3rem; }
 .balances-table tr.positive td:last-child { color: var(--success); }
 .balances-table tr.negative td:last-child { color: var(--danger); }
 
-.suggestion-list li {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0.5rem 0; border-bottom: 1px solid var(--border); gap: 0.5rem; flex-wrap: wrap;
+.suggestion-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
 }
-.suggestion-list li:last-child { border-bottom: none; }
+.suggestion-item:last-child { border-bottom: none; }
+
+.suggestion-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 0.5rem; flex-wrap: wrap;
+}
+
+.suggestion-why { margin-top: 0.4rem; font-size: 0.85rem; }
+.suggestion-why summary { cursor: pointer; color: var(--accent); }
+.suggestion-why summary::-webkit-details-marker { color: var(--accent); }
+
+.ledger-columns {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.ledger-col { flex: 1; min-width: 220px; }
+.ledger-col .hint { margin: 0 0 0.3rem; }
+
+.ledger { list-style: none; margin: 0; padding: 0; }
+.ledger li {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 0.6rem; padding: 0.25rem 0; border-bottom: 1px dashed var(--border);
+}
+.ledger li:last-child { border-bottom: none; }
+.ledger-desc { flex: 1; }
+.ledger-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ledger-amount.positive { color: var(--success); }
+.ledger-amount.negative { color: var(--danger); }
 
 .admin-member-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; flex-wrap: wrap; }
 .inline { display: inline-flex; gap: 0.4rem; align-items: center; }
