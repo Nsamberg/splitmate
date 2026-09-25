@@ -9,6 +9,13 @@ class Member(SQLModel, table=True):
     name: str = Field(unique=True, index=True)
     is_admin: bool = False
     active: bool = True
+    # Payment routing preference: when this member owes money, the recap
+    # page's preference-aware suggestions try to route it to this person
+    # first (e.g. because of a shared bank/currency), before falling back
+    # to the plain minimal-transfer algorithm. Both optional and editable
+    # from /admin — not a hard rule, just a preference.
+    preferred_creditor_id: Optional[int] = Field(default=None, foreign_key="member.id")
+    preference_note: Optional[str] = None
 
 
 class Expense(SQLModel, table=True):

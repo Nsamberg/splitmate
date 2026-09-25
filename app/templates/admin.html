@@ -26,6 +26,30 @@
 </div>
 
 <div class="card">
+  <h2>Payment preferences</h2>
+  <p class="hint">Used by the recap page's preference-aware suggestions to route a member's payment to whoever they find easiest to pay (e.g. a shared bank/currency), before falling back to whichever transfer minimizes the total count.</p>
+  <ul class="admin-member-list">
+    {% for m in members %}
+    <li>
+      <form method="post" action="/admin/members/{{ m.id }}/preference" class="inline preference-form">
+        <span class="preference-name">{{ m.name }}</span>
+        <select name="preferred_creditor_id">
+          <option value="">No preference</option>
+          {% for other in members %}
+          {% if other.id != m.id %}
+          <option value="{{ other.id }}" {% if m.preferred_creditor_id == other.id %}selected{% endif %}>Prefers to pay {{ other.name }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+        <input type="text" name="preference_note" value="{{ m.preference_note or '' }}" placeholder="Reason (e.g. has a UK account)">
+        <button type="submit">Save</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
   <h2>Access code</h2>
   <p class="hint">Current code: <code>{{ access_code }}</code></p>
   <form method="post" action="/admin/access-code/regenerate" class="inline" onsubmit="return confirm('Generate a new random access code? Everyone will need the new one to log in.');">

@@ -1,33 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Recap &middot; splitmate{% endblock %}
-{% block content %}
-<div class="card">
-  <h2>Balances</h2>
-  <table class="balances-table">
-    <thead><tr><th>Member</th><th>Balance</th></tr></thead>
-    <tbody>
-      {% for r in rows %}
-      <tr class="{{ 'positive' if r.cents > 0 else ('negative' if r.cents < 0 else '') }}">
-        <td>{{ r.name }}</td>
-        <td>{{ r.status }}{% if r.cents != 0 %}: ${{ r.amount }}{% endif %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
 
-<div class="card">
-  <h2>Suggested transfers</h2>
-  {% if not suggestions %}
-  <p class="hint">Everyone's settled up. Nothing to transfer.</p>
+{% macro suggestion_list(items, empty_message) %}
+  {% if not items %}
+  <p class="hint">{{ empty_message }}</p>
   {% endif %}
   <ul class="suggestion-list">
-    {% for s in suggestions %}
+    {% for s in items %}
     <li class="suggestion-item">
       <div class="suggestion-row">
         <span>{{ s.from_name }} &rarr; {{ s.to_name }}: <strong>${{ s.amount }}</strong></span>
         <a class="btn-secondary" href="/settle?from_member_id={{ s.from_id }}&amp;to_member_id={{ s.to_id }}&amp;amount={{ s.amount_raw }}">Record this transfer</a>
       </div>
+      {% if s.reason %}
+      <p class="suggestion-reason">{{ s.from_name }} prefers this &mdash; {{ s.reason }}.</p>
+      {% endif %}
       <details class="suggestion-why">
         <summary>Why?</summary>
         <div class="ledger-columns">
@@ -58,5 +45,33 @@
     </li>
     {% endfor %}
   </ul>
+{% endmacro %}
+
+{% block content %}
+<div class="card">
+  <h2>Balances</h2>
+  <table class="balances-table">
+    <thead><tr><th>Member</th><th>Balance</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="{{ 'positive' if r.cents > 0 else ('negative' if r.cents < 0 else '') }}">
+        <td>{{ r.name }}</td>
+        <td>{{ r.status }}{% if r.cents != 0 %}: ${{ r.amount }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Suggested transfers</h2>
+  <p class="hint">Minimum number of transfers to settle everyone up.</p>
+  {{ suggestion_list(suggestions, "Everyone's settled up. Nothing to transfer.") }}
+</div>
+
+<div class="card">
+  <h2>Suggested transfers &mdash; accounting for banking preferences</h2>
+  <p class="hint">Routes through people's preferred accounts first (see each member's note below), then fills in whatever's left over to keep the transfer count low. Set or change these from the Admin page.</p>
+  {{ suggestion_list(preferred_suggestions, "Everyone's settled up. Nothing to transfer.") }}
 </div>
 {% endblock %}

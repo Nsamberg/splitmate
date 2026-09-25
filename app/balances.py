@@ -115,3 +115,65 @@ def suggest_settlements(balances: dict[int, int]) -> list[tuple[int, int, int]]:
         if creditors[j][1] == 0:
             j += 1
     return suggestions
+
+
+def suggest_settlements_with_preferences(db: Session, balances: dict[int, int]) -> list[dict]:
+    """Like suggest_settlements, but a debtor with a stated payment
+    preference (Member.preferred_creditor_id — e.g. "pay Niko, she has a UK
+    account") is routed there first, up to what that person is actually
+    owed. Whatever can't be covered that way (no preference, or the
+    preferred creditor's balance is already used up) falls back to the
+    plain minimal-transfer algorithm. Preferred debtors are processed
+    most-owed-first so a shared preferred creditor (e.g. several people who
+    all prefer paying the same person) is allocated deterministically.
+
+    Returns a list of {from_id, to_id, cents, reason} dicts, largest first.
+    `reason` is the debtor's preference_note, but only attached to a
+    transfer that actually went to their preferred person (or, for a
+    debtor with no specific preferred person but a general note — e.g.
+    "prefers to limit the number of transfers" — to wherever they land).
+    A leftover amount that couldn't be routed to someone's stated
+    preference (already covered) gets no reason, so it doesn't misleadingly
+    read as if that's why *this* transfer was suggested.
+    """
+    remaining = dict(balances)
+    members = {m.id: m for m in db.exec(select(Member)).all()}
+    pairs: dict[tuple[int, int], int] = defaultdict(int)
+    preferred_pairs: set[tuple[int, int]] = set()
+
+    debtor_ids_with_prefs = sorted(
+        (
+            m.id
+            for m in members.values()
+            if m.preferred_creditor_id is not None and remaining.get(m.id, 0) < 0
+        ),
+        key=lambda mid: remaining[mid],  # most negative (most owed) first
+    )
+    for debtor_id in debtor_ids_with_prefs:
+        creditor_id = members[debtor_id].preferred_creditor_id
+        if creditor_id is None or creditor_id not in remaining:
+            continue
+        owed, due = -remaining[debtor_id], remaining[creditor_id]
+        pay = min(owed, due)
+        if pay <= 0:
+            continue
+        remaining[debtor_id] += pay
+        remaining[creditor_id] -= pay
+        pairs[(debtor_id, creditor_id)] += pay
+        preferred_pairs.add((debtor_id, creditor_id))
+
+    for debtor_id, creditor_id, cents in suggest_settlements(remaining):
+        pairs[(debtor_id, creditor_id)] += cents
+
+    results = []
+    for (debtor_id, creditor_id), cents in pairs.items():
+        if cents <= 0:
+            continue
+        debtor = members[debtor_id]
+        if (debtor_id, creditor_id) in preferred_pairs or debtor.preferred_creditor_id is None:
+            reason = debtor.preference_note
+        else:
+            reason = None
+        results.append({"from_id": debtor_id, "to_id": creditor_id, "cents": cents, "reason": reason})
+    results.sort(key=lambda r: -r["cents"])
+    return results

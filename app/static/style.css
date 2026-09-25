@@ -161,6 +161,8 @@ legend { color: var(--muted); font-size: 0.85rem; padding: 0 0.3rem; }
   gap: 0.5rem; flex-wrap: wrap;
 }
 
+.suggestion-reason { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--muted); font-style: italic; }
+
 .suggestion-why { margin-top: 0.4rem; font-size: 0.85rem; }
 .suggestion-why summary { cursor: pointer; color: var(--accent); }
 .suggestion-why summary::-webkit-details-marker { color: var(--accent); }
@@ -187,6 +189,11 @@ legend { color: var(--muted); font-size: 0.85rem; padding: 0 0.3rem; }
 
 .admin-member-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; flex-wrap: wrap; }
 .inline { display: inline-flex; gap: 0.4rem; align-items: center; }
+
+.preference-form { flex-wrap: wrap; width: 100%; }
+.preference-name { font-weight: 600; min-width: 90px; }
+.preference-form select { flex: 1; min-width: 160px; }
+.preference-form input[type="text"] { flex: 2; min-width: 180px; }
 
 .badge { font-size: 0.7rem; background: var(--border); border-radius: 6px; padding: 0.1rem 0.4rem; color: var(--muted); }
 .badge.active { color: var(--success); }

@@ -92,6 +92,36 @@ def toggle_member_active(
     return RedirectResponse("/admin", status_code=303)
 
 
+@router.post("/members/{member_id}/preference")
+def set_member_preference(
+    member_id: int,
+    request: Request,
+    preferred_creditor_id: str = Form(""),
+    preference_note: str = Form(""),
+    member: Member = Depends(require_admin),
+    db: Session = Depends(get_session),
+):
+    target = db.get(Member, member_id)
+    if not target:
+        flash(request, "Member not found.", "error")
+        return RedirectResponse("/admin", status_code=303)
+
+    preferred_id = int(preferred_creditor_id) if preferred_creditor_id else None
+    if preferred_id == member_id:
+        flash(request, "A member can't prefer paying themselves.", "error")
+        return RedirectResponse("/admin", status_code=303)
+    if preferred_id is not None and not db.get(Member, preferred_id):
+        flash(request, "Invalid preferred recipient.", "error")
+        return RedirectResponse("/admin", status_code=303)
+
+    target.preferred_creditor_id = preferred_id
+    target.preference_note = preference_note.strip() or None
+    db.add(target)
+    db.commit()
+    flash(request, f"Updated {target.name}'s payment preference.", "success")
+    return RedirectResponse("/admin", status_code=303)
+
+
 @router.post("/access-code/regenerate")
 def regenerate_access_code(
     request: Request,
