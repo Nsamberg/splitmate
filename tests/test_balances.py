@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -8,7 +8,7 @@ from app.balances import (
     suggest_settlements,
     suggest_settlements_with_preferences,
 )
-from app.models import Expense, ExpenseParticipant, Member, Settlement
+from app.models import Expense, ExpenseParticipant, Member, Settlement, utcnow
 from app.money import split_equally
 
 
@@ -73,7 +73,7 @@ def test_compute_balances_ignores_soft_deleted_expense():
     db = make_session()
     alice, bob = add_members(db, "Alice", "Bob")
     expense = add_expense(db, alice, 1000, [alice, bob])
-    expense.deleted_at = datetime.utcnow()
+    expense.deleted_at = utcnow()
     expense.deleted_by_id = alice.id
     db.add(expense)
     db.commit()
@@ -133,7 +133,7 @@ def test_ignores_soft_deleted_settlement():
         amount_cents=500,
         settlement_date=date.today(),
         created_by_id=bob.id,
-        deleted_at=datetime.utcnow(),
+        deleted_at=utcnow(),
         deleted_by_id=bob.id,
     )
     db.add(settlement)
@@ -190,7 +190,7 @@ def test_member_ledger_ignores_soft_deleted():
     db = make_session()
     alice, bob = add_members(db, "Alice", "Bob")
     expense = add_expense(db, alice, 1000, [alice, bob])
-    expense.deleted_at = datetime.utcnow()
+    expense.deleted_at = utcnow()
     expense.deleted_by_id = alice.id
     db.add(expense)
     db.commit()

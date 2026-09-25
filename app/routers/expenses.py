@@ -1,11 +1,11 @@
-from datetime import date, datetime
+from datetime import date
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
 from ..db import get_session
-from ..models import Expense, ExpenseParticipant, Member
+from ..models import Expense, ExpenseParticipant, Member, utcnow
 from ..money import format_cents, parse_amount_to_cents, split_equally
 from ..security import flash, require_member
 from ..templating import render
@@ -169,7 +169,7 @@ def delete_expense(
         flash(request, "Only the person who added this expense (or an admin) can delete it.", "error")
         return RedirectResponse("/", status_code=303)
 
-    expense.deleted_at = datetime.utcnow()
+    expense.deleted_at = utcnow()
     expense.deleted_by_id = member.id
     db.add(expense)
     db.commit()

@@ -1,7 +1,19 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
+
+
+def utcnow() -> datetime:
+    """Current time as a timezone-aware UTC datetime.
+
+    Use this (not datetime.utcnow(), which is naive) for created_at/deleted_at
+    everywhere — sqlmodel's DateTime handling rejects naive datetimes on
+    write. Existing naive timestamps already in the DB still read back fine
+    (sqlmodel treats a naive stored value as UTC), so this needs no data
+    migration.
+    """
+    return datetime.now(timezone.utc)
 
 
 class Member(SQLModel, table=True):
@@ -25,7 +37,7 @@ class Expense(SQLModel, table=True):
     paid_by_id: int = Field(foreign_key="member.id")
     expense_date: date
     created_by_id: int = Field(foreign_key="member.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     # Soft-delete: kept for audit trail, excluded from balances/lists.
     deleted_at: Optional[datetime] = None
     deleted_by_id: Optional[int] = Field(default=None, foreign_key="member.id")
@@ -46,7 +58,7 @@ class Settlement(SQLModel, table=True):
     settlement_date: date
     note: Optional[str] = None
     created_by_id: int = Field(foreign_key="member.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
     # Soft-delete, same as Expense.
     deleted_at: Optional[datetime] = None
     deleted_by_id: Optional[int] = Field(default=None, foreign_key="member.id")

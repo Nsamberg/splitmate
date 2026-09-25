@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
 from ..db import get_session
-from ..models import Member, Settlement
+from ..models import Member, Settlement, utcnow
 from ..money import parse_amount_to_cents
 from ..security import flash, require_member
 from ..templating import render
@@ -102,7 +102,7 @@ def delete_settlement(
         flash(request, "Only the person who recorded this transfer (or an admin) can delete it.", "error")
         return RedirectResponse("/recap", status_code=303)
 
-    settlement.deleted_at = datetime.utcnow()
+    settlement.deleted_at = utcnow()
     settlement.deleted_by_id = member.id
     db.add(settlement)
     db.commit()
